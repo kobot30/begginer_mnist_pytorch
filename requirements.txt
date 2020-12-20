@@ -1,0 +1,8 @@
+torch==1.7.0 # pytorch
+torchvision==0.8.1 # pytorch関連の前処理、モデルライブラリ
+numpy==1.18.5
+opencv-python==4.4.0.42 # OpenCV
+click==7.1.2
+matplotlib==3.3.2
+cvui==2.7 # 次章(第三章)のGUIアプリの描画に使用します
+tqdm==4.51.0 # プログレスバー表示に使用します
