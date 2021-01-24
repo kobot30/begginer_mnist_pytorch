@@ -1,6 +1,6 @@
 import cv2
 from torch.utils.data import DataLoader
-from torchvision.datasets import MNIST, EMNIST, FashionMNIST, KMNIST
+from torchvision.datasets import MNIST, EMNIST, FashionMNIST, KMNIST, QMNIST
 from torchvision import transforms
 
 transform = transforms.Compose([
@@ -19,6 +19,10 @@ dataset_train = MNIST('data/', train=True, download=True, transform=transform)
 
 # Fashion-MNIST
 # dataset_train = FashionMNIST('data/', train=True, download=True, transform=transform)
+
+# QMNIST
+# dataset_train = QMNIST('data/', train=True, download=True, transform=transform)
+
 
 train_loader = DataLoader(dataset_train, batch_size=10, shuffle=False)
 # test_loader = DataLoader(dataset_test)
