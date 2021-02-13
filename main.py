@@ -89,8 +89,8 @@ def main(test_flag, convolution, classification, regression, auto_encoder, gan, 
     num_workers : CPUコア使用数(高速化に寄与)
     pin_memory : automatic memory pinningの有効化(高速化に寄与)
     '''
-    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=os.cpu_count(), pin_memory=True)
-    test_loader = DataLoader(dataset_test, batch_size=batch_size, num_workers=os.cpu_count(), pin_memory=True)
+    train_loader = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
+    test_loader = DataLoader(dataset_test, batch_size=batch_size, num_workers=1, pin_memory=True)
 
     # 分類
     if classification:
@@ -152,11 +152,12 @@ def main(test_flag, convolution, classification, regression, auto_encoder, gan, 
             model.load_state_dict(torch.load(model_path))
             cam = Cam(model)
 
-            for i, [x_data, y_data] in enumerate(test_loader):
+            for _, [x_data, y_data] in enumerate(test_loader):
                 x, y = x_data.to(device), y_data.to(device)
-                output = model(x)
+                output = model.forward(x)
 
-                for j in range(batch_size):
+                for j in range(len(y_data)):
+                    print(j)
                     model.zero_grad()
                     output[j, y[j]].backward(retain_graph=True)  # 正解ラベルをbackward
                     out = cam.get_cam(j)

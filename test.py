@@ -45,11 +45,11 @@ def test_show(model, model_path, test_loader, device="cpu", flag=None):
     model.load_state_dict(torch.load(model_path))
     model.eval()
     with torch.no_grad():
-        for _, (x_data, y_data) in enumerate(test_loader):
+        for index, (x_data, y_data) in enumerate(test_loader):
             x, y = x_data.to(device), y_data.to(device)
 
             # 読み込んだ正解ラベルを出力
-            print("label_ans = {}".format(y_data.item()))
+            print("label_ans = {}".format(y_data[index]))
             pred_y = model(x)
 
             if flag == ModelSelectFlag.AUTOENCODER:
@@ -75,16 +75,13 @@ def test_show(model, model_path, test_loader, device="cpu", flag=None):
                 input_image *= 255.0
                 input_image = input_image.astype(np.uint8)
 
-                # 入力画像と出力画像の差分
-                diff = input_image - pred
-                diff_abs = np.abs(diff)
-
                 # 画像左から[入力画像、復元画像、差分画像]
-                result = np.zeros((28, 128), dtype=np.uint8)
+                result = np.zeros((140, 300), dtype=np.uint8)
                 result += 255
-                result[:28, :28] = input_image
-                result[:28, 50:78] = pred
-                result[:28, 100:128] = diff_abs
+                input_image = cv2.resize(input_image, (140, 140))
+                pred = cv2.resize(pred, (140, 140))
+                result[:140, :140] = input_image
+                result[:140, 160:300] = pred
 
                 # write image
                 # name = "data/" + str(_) + ".png"
@@ -95,14 +92,16 @@ def test_show(model, model_path, test_loader, device="cpu", flag=None):
                 loss = criterion(x, pred_y)
                 print("loss = {}".format(loss.item()))
 
-                print("press enter key. if exit, press [q] key. \n")
+                print("next : press any key")
+                print("exit : press [q] key \n")
+                cv2.imshow("auto_encoder", result)
                 k = cv2.waitKey(-1)
                 if k == ord('q'):
                     break
 
             elif flag == ModelSelectFlag.REGRESSION:
                 # 回帰タスクの結果出力
-                print("predict (value, label_result) = ({:.3f}, {})".format(pred_y.item(), round(pred_y.item())))
+                print("predict (value, label_result) = ({:.3f}, {})".format(pred_y[index].item(), round(pred_y[index].item())))
                 key_wait()
 
             elif flag == ModelSelectFlag.CLASSIFICATION:
