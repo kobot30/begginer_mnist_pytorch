@@ -1,6 +1,7 @@
 import click
 import matplotlib.pyplot as plt
-import os
+import cv2
+import numpy as np
 
 # PyTorch
 import torch
@@ -8,7 +9,6 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST
 from torchvision import transforms
-from torch.autograd import Variable
 
 # NN model
 from model.classification import Classification
@@ -18,6 +18,7 @@ from model.conv_auto_encoder import ConvAutoEncoder
 from model.gan import Generator, Discriminator
 from model.cam import Cam
 from model.cam_conv_classification import CamConvClassification
+from model.unet import Unet
 
 # utils
 from model_select import ModelSelectFlag
@@ -25,7 +26,8 @@ from train import train_run
 from train_gan import train_gan_run
 from train_cam import train_cam_run
 from test import test_show
-
+from mnist_dataset import MnistDataset, get_image_mask_set
+from train_seg import train_seg_run
 
 # lossグラフの描画
 def loss_graph(train_loss, test_loss, save_name, label_1='train loss', label_2='test loss'):
@@ -49,7 +51,8 @@ def loss_graph(train_loss, test_loss, save_name, label_1='train loss', label_2='
 @click.option('--auto_encoder', '-a', is_flag=False)
 @click.option('--gan', '-g', is_flag=False)
 @click.option('--cam', '-m', is_flag=False)
-def main(test_flag, convolution, classification, regression, auto_encoder, gan, cam):
+@click.option('--segmentation', '-seg', is_flag=False)
+def main(test_flag, convolution, classification, regression, auto_encoder, gan, cam, segmentation):
 
     # device config (CPU or GPUを使用するか識別している)
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -167,6 +170,54 @@ def main(test_flag, convolution, classification, regression, auto_encoder, gan, 
             train_cam_run(n_epochs, model, train_loader, test_loader, device)
             torch.save(model.state_dict(), model_path)
 
+    # セグメンテーション
+    elif segmentation:
+        n_epochs = 10
+        batch_size = 50
+        model_path = 'data/model_seg.pth'
+        model = Unet(n_class=2).to(device)
+
+        # MNISTデータセットから一部をndarray型で取得
+        mnist_train_images = dataset_train.data.numpy()[:2000] # 0-2000までの学習用データを使用する
+        mnist_test_images = dataset_test.data.numpy()[:batch_size] # 0-batch_sizeまでのテスト用データを使用する
+
+        # RGB画像とマスク画像の2種類に変換する
+        train_images, train_masks = get_image_mask_set(mnist_train_images)
+        test_images, test_masks = get_image_mask_set(mnist_test_images)           
+
+        # 自前のMnistDatasetを使用しPyTorchのデータローダーとして準備する
+        mnist_train = MnistDataset(train_images, train_masks, transform=transform) 
+        mnist_test = MnistDataset(test_images, test_masks, transform=transform) 
+        train_loader = DataLoader(mnist_train, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
+        test_loader = DataLoader(mnist_test, batch_size=batch_size, num_workers=1, pin_memory=True)
+
+        if test_flag:
+            model.load_state_dict(torch.load(model_path))
+            model.eval() 
+
+            color = np.asarray([(0, 0, 0), (0, 0, 255)]) # 背景:黒、検出領域:赤
+            for _, [inputs, labels] in enumerate(test_loader):
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+                pred = model(inputs)
+                pred = pred.data.cpu().numpy()
+
+                for mask in pred:
+                    # mask convert color
+                    _, height, width = mask.shape
+                    colorimg = np.zeros((height, width, 3), dtype=np.uint8)
+                    for y in range(height):
+                        for x in range(width):
+                           colorimg[y,x,:] = color[np.argmax(mask[:, y, x])]
+                    
+                    pred_result = cv2.resize(colorimg, (128, 128))
+                    cv2.imshow("pred_result", pred_result)
+                    k = cv2.waitKey(-1)
+                    if k == ord('q'):
+                        break
+        else:
+            model = train_seg_run(n_epochs, model, train_loader, device=device)
+            torch.save(model.state_dict(), model_path)
     else:
         raise AssertionError("flag error")
 
