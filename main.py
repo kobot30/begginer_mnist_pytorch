@@ -178,7 +178,7 @@ def main(test_flag, convolution, classification, regression, auto_encoder, gan, 
         model = Unet(n_class=2).to(device)
 
         # MNISTデータセットから一部をndarray型で取得
-        mnist_train_images = dataset_train.data.numpy()[:2000] # 0-2000までの学習用データを使用する
+        mnist_train_images = dataset_train.data.numpy()[:500] # 0-500までの学習用データを使用する
         mnist_test_images = dataset_test.data.numpy()[:batch_size] # 0-batch_sizeまでのテスト用データを使用する
 
         # RGB画像とマスク画像の2種類に変換する
