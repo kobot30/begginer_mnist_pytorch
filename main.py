@@ -189,7 +189,7 @@ def main(test_flag, convolution, classification, regression, auto_encoder, gan, 
         mnist_train = MnistDataset(train_images, train_masks, transform=transform) 
         mnist_test = MnistDataset(test_images, test_masks, transform=transform) 
         train_loader = DataLoader(mnist_train, batch_size=batch_size, shuffle=True, num_workers=1, pin_memory=True)
-        test_loader = DataLoader(mnist_test, batch_size=batch_size, num_workers=1, pin_memory=True)
+        test_loader = DataLoader(mnist_test, batch_size=batch_size, shuffle=False, num_workers=1, pin_memory=True)
 
         if test_flag:
             model.load_state_dict(torch.load(model_path))
