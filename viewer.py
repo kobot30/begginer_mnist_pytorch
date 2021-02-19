@@ -9,6 +9,7 @@ from model.classification import Classification
 from model.auto_encoder import AutoEncoder
 from model.cam_conv_classification import CamConvClassification
 from model.cam import Cam
+from model.unet import Unet
 from model_select import ModelSelectFlag
 
 # クリック周辺の塗りつぶす範囲
@@ -20,14 +21,23 @@ def predict(model, img, device="cpu", flag=None):
 
     # 手書き文字をMNISTのフォーマットに変換する
     input_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # カラー画像から白黒画像へ
-    input_resize = cv2.resize(input_gray, (28, 28))  # 28x28ピクセルへ
-    input_resize = np.reshape(input_resize, (28, 28, 1))  # 1chであるように配列を修正
-
+    
+    if flag == ModelSelectFlag.SEGMENTATION:
+        input_resize = cv2.resize(input_gray, (56, 56))  # 56x56ピクセルへ
+        input_resize = np.reshape(input_resize, (56, 56, 1))  # 1chであるように配列を修正
+    else:
+        input_resize = cv2.resize(input_gray, (28, 28)) 
+        input_resize = np.reshape(input_resize, (28, 28, 1))  
+    
     # 学習時と同じテンソル型に変換する
     to_tensor = transforms.ToTensor()(input_resize)
     tensor_normalize = transforms.Normalize(mean=(0.5,), std=(0.5,))(to_tensor)
     input_resize = tensor_normalize.to("cpu").detach().numpy()
-    input_resize = np.reshape(input_resize, (1, 1, 28, 28))  # [batch, ch, height, width]
+
+    if flag == ModelSelectFlag.SEGMENTATION:
+        input_resize = np.reshape(input_resize, (1, 1, 56, 56))  # [batch, ch, height, width]
+    else:
+        input_resize = np.reshape(input_resize, (1, 1, 28, 28))
     tensor = torch.from_numpy(input_resize)
     input_tensor = tensor.to(device)  # 推論に使用する入力画像のTensor型
 
@@ -83,11 +93,23 @@ def predict(model, img, device="cpu", flag=None):
             cam_color_map = cv2.applyColorMap(cam_img, cv2.COLORMAP_JET)
             return cam_color_map
 
+        if flag ==  ModelSelectFlag.SEGMENTATION:
+            color = np.asarray([(0, 0, 0), (0, 0, 255)]) # 背景:黒、検出領域:赤
+            pred_y = model(input_tensor)
+            pred = pred_y.data.cpu().numpy()
+            for mask in pred:
+                _, height, width = mask.shape
+                colorimg = np.zeros((height, width, 3), dtype=np.uint8)
+                for y in range(height):
+                    for x in range(width):
+                        colorimg[y,x,:] = color[np.argmax(mask[:, y, x])]
+            return colorimg
+
 
 if __name__ == '__main__':
-    # 横幅 500px 縦幅 400pxのメインウィンドウを作成
+    # 横幅 500px 縦幅 450pxのメインウィンドウを作成
     window_w = 500
-    window_h = 400
+    window_h = 450
     frame = np.zeros((window_h, window_w, 3), np.uint8)
 
     # メインウィンドウの初期化
@@ -117,6 +139,11 @@ if __name__ == '__main__':
     cam_model_path = "data/model_cam.pth"
     model_cam = torch.nn.DataParallel(CamConvClassification().to(device))
     model_cam.load_state_dict(torch.load(cam_model_path))
+
+    # Segmentation モデル読み込み
+    segmentation_model_path = "data/model_seg.pth"
+    model_seg = Unet(n_class=2).to(device)
+    model_seg.load_state_dict(torch.load(segmentation_model_path))
 
     while True:
 
@@ -161,6 +188,13 @@ if __name__ == '__main__':
             pred_resize = cv2.resize(pred_img, (140, 140))
             add_image = cv2.addWeighted(input_img, 0.5, pred_resize, 0.5, 2)
             frame[70:210, 280:420, :] = add_image
+
+        # segmentation
+        if cvui.button(frame, 280, 400, 140, 30, "segmentation"):
+            input_img = frame[70:210, 70:210, :]
+            pred_img = predict(model_seg, input_img, device, ModelSelectFlag.SEGMENTATION)
+            pred_resize = cv2.resize(pred_img, (140, 140))
+            frame[70:210, 280:420, :] = pred_resize
 
         # 画面更新
         cvui.imshow(WINDOW_NAME, frame)

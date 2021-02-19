@@ -8,9 +8,7 @@ def get_image_mask_set(mnist_images):
     masks = []
     for image in mnist_images:
             image = cv2.resize(image, (56, 56)) # 56x56ピクセルにリサイズ
-
-            color = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR) # 白黒からカラー画像に変換
-            images.append(color)
+            images.append(image)
                 
             _, binary = cv2.threshold(image, 125, 255, cv2.THRESH_BINARY)
             mask = (binary > 0).astype(np.float32)

@@ -7,3 +7,4 @@ class ModelSelectFlag(Enum):
     AUTOENCODER = 3
     GAN = 4  # not use
     CAM = 5
+    SEGMENTATION = 6
