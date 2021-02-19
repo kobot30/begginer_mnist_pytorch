@@ -9,7 +9,7 @@ class Unet(nn.Module):
         super().__init__()
 
         # conv_down 1
-        self.conv_down_1_1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)
+        self.conv_down_1_1 = nn.Conv2d(1, 64, kernel_size=3, padding=1) # input:1ch
         self.conv_down_1_2 = nn.Conv2d(64, 64, kernel_size=3, padding=1)
 
         # conv_down 2
