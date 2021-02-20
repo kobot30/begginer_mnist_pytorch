@@ -181,7 +181,7 @@ def main(test_flag, convolution, classification, regression, auto_encoder, gan, 
         mnist_train_images = dataset_train.data.numpy()[:500] # 0-500までの学習用データを使用する
         mnist_test_images = dataset_test.data.numpy()[:batch_size] # 0-batch_sizeまでのテスト用データを使用する
 
-        # RGB画像とマスク画像の2種類に変換する
+        # 元々の白黒画像と描画領域を示すマスク画像の2種類に変換する
         train_images, train_masks = get_image_mask_set(mnist_train_images)
         test_images, test_masks = get_image_mask_set(mnist_test_images)           
 
