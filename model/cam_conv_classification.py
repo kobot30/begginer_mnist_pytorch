@@ -13,14 +13,10 @@ class CamConvClassification(nn.Module):
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1),
             nn.BatchNorm2d(num_features=32),
             nn.ReLU(),
-            nn.AvgPool2d(kernel_size=2, stride=2), # 7x7
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(num_features=64),
-            nn.ReLU(),
         )
 
         self.fc_layer = nn.Sequential(
-            nn.Linear(64 * 7 * 7, 1000), # out_channels * pixcel * pixcel
+            nn.Linear(32 * 14 * 14, 1000), # out_channels * pixcel * pixcel
             nn.ReLU(),
             nn.Linear(1000, 10)
         )
